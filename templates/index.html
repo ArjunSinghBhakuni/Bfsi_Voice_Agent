@@ -2,13 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>BFSI Voice Agent — Dashboard</title>
+  <title>BFSI Voice Agent Dashboard</title>
   <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
   <div class="top-panel">
     <h2>👤 Customer Snapshot — <span id="cust-name">Aarav Sharma</span></h2>
     <div class="info-grid">
+      <div>📱 Mobile: <span id="cust-phone">+91XXXXXXXXXX</span></div>
       <div>💰 Balance: ₹<span id="balance">125430</span></div>
       <div>💳 Card: <span id="card">Active</span></div>
       <div>🏠 EMI Due: <span id="emi">Nov 5, 2025</span></div>
@@ -30,38 +31,67 @@
         </ul>
       </div>
     </div>
-
     <div class="right">
       <h2>🗣️ Conversation</h2>
       <div id="chat-log"></div>
     </div>
   </div>
 
-  <script>
-    async function startCall() {
-      const res = await fetch('/start-call');
-      const data = await res.json();
-      if (data.error) alert("Error: " + data.error);
-      else alert(data.status + (data.sid ? " — " + data.sid : ""));
-    }
+ <script>
+  let callActive = false; // Track if call is happening
 
-    async function refreshChat() {
+  async function startCall() {
+    const res = await fetch('/start-call');
+    const data = await res.json();
+    alert(data.status || data.error);
+
+    // When a call starts, enable chat refresh
+    if (data.status && data.status.includes("success")) {
+      callActive = true;
+      refreshChat(); // immediate update
+    }
+  }
+
+  async function refreshChat() {
+    if (!callActive) return; // 🚫 don't poll if no call
+
+    try {
       const res = await fetch('/conversation');
-      const obj = await res.json();
+      const data = await res.json();
       const log = document.getElementById('chat-log');
-      log.innerHTML = obj.chat.map(c =>
+      log.innerHTML = data.chat.map(c =>
         `<div class="msg ${c.role}"><strong>${c.role}:</strong> ${c.text}</div>`
       ).join('');
-    }
 
-    async function refreshDemo() {
-      // fetch optional demo-data if needed (already rendered server-side)
-      // placeholder for future
-    }
+      // detect if call is active or ended
+      const lastSystemMsg = [...data.chat].reverse().find(c => c.role === "system");
+      if (lastSystemMsg && lastSystemMsg.text.includes("📞 Call status:")) {
+        const status = lastSystemMsg.text.split(":").pop().trim();
+        if (["completed", "failed", "busy", "no-answer"].includes(status)) {
+          callActive = false;
+          console.log("Call ended — stop polling.");
+        } else {
+          callActive = true; // in-progress or ringing
+        }
+      }
 
-    setInterval(refreshChat, 2000);
-    setInterval(refreshDemo, 5000);
-    window.onload = () => { refreshChat(); refreshDemo(); };
-  </script>
+      // update phone and card in UI
+      const phoneMatch = data.chat.find(c => c.text.includes('+91'));
+      if (phoneMatch)
+        document.getElementById('cust-phone').innerText =
+          phoneMatch.text.match(/\+91\d{10}/)?.[0] || '+91XXXXXXXXXX';
+      if (data.chat.some(c => c.text.toLowerCase().includes('blocked')))
+        document.getElementById('card').innerText = 'Blocked';
+    } catch (err) {
+      console.warn('Chat refresh failed', err);
+    }
+  }
+
+  // Poll every 2 s only when active
+  setInterval(() => {
+    if (callActive) refreshChat();
+  }, 2000);
+</script>
+
 </body>
 </html>
