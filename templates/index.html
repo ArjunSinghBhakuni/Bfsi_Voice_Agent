@@ -43,8 +43,9 @@
 
   <script>
     async function startCall() {
-      const res = await fetch('/start-call');
-      alert('📞 Call initiated successfully!');
+       const res = await fetch('/start-call');
+    const data = await res.json();
+    alert(data.message || 'Call initiated!');
     }
 
     async function refreshChat() {

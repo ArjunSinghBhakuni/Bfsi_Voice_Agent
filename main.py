@@ -1,13 +1,14 @@
-# main.py — Render-ready version
+# main.py — Final Render + Twilio Call Enabled
 from fastapi import FastAPI, Request, Form
 from fastapi.responses import Response, JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from twilio.twiml.voice_response import VoiceResponse, Gather
+from twilio.rest import Client
 from datetime import datetime
 from business_logic_bfsi import BFSIBusinessLogic
 from pathlib import Path
-import requests, os, logging
+import os
 
 # === BASE PATH SETUP (ensures templates/static found on Render) ===
 BASE_DIR = Path(__file__).resolve().parent
@@ -30,6 +31,13 @@ demo_data = {
     "emi_due": "Nov 5, 2025",
     "claim_status": "Under Review",
 }
+
+# --- Twilio configuration (from environment variables) ---
+TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
+TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
+TWILIO_PHONE_NUMBER = os.getenv("TWILIO_PHONE_NUMBER")
+YOUR_PHONE_NUMBER = os.getenv("YOUR_PHONE_NUMBER")
+BACKEND_URL = os.getenv("BACKEND_URL", "https://bfsi-voice-agent.onrender.com")
 
 # ================================================================
 # 🖥️ DASHBOARD ROUTES
@@ -74,10 +82,46 @@ async def demo_update(request: Request):
 async def get_demo_data():
     return JSONResponse(demo_data)
 
+
+# ================================================================
+# 📞 START CALL (Trigger Twilio API)
+# ================================================================
+@app.get("/start-call")
+async def start_call():
+    """Trigger outbound Twilio call to the user."""
+    try:
+        if not all([TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER, YOUR_PHONE_NUMBER]):
+            return JSONResponse({"error": "Missing Twilio configuration"}, status_code=500)
+
+        client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+
+        call = client.calls.create(
+            to=YOUR_PHONE_NUMBER,
+            from_=TWILIO_PHONE_NUMBER,
+            url=f"{BACKEND_URL}/voice",
+            status_callback=f"{BACKEND_URL}/call-status",
+            status_callback_event=["initiated", "ringing", "answered", "completed"],
+            method="POST"
+        )
+
+        chat_log.append({
+            "role": "system",
+            "text": f"📞 Outbound call initiated — SID: {call.sid}"
+        })
+
+        return JSONResponse({
+            "status": "Call initiated",
+            "sid": call.sid,
+            "message": f"📞 Calling {YOUR_PHONE_NUMBER} via Twilio"
+        })
+
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
 # ================================================================
 # 📞 TWILIO VOICE ROUTES
 # ================================================================
-
 @app.post("/voice")
 async def voice(request: Request):
     form = await request.form()
@@ -158,7 +202,6 @@ async def call_status(request: Request):
 # ================================================================
 # 🧠 SYSTEM + DEBUG ROUTES
 # ================================================================
-
 @app.get("/health")
 async def health():
     return {"status": "ok"}
