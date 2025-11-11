@@ -1,5 +1,3 @@
-# In-memory sample data for BFSI prototype (no database required)
-
 from datetime import date
 
 CUSTOMERS = {
@@ -9,20 +7,11 @@ CUSTOMERS = {
         "language": "en-IN",
         "accounts": [
             {"type": "savings", "last4": "4567", "balance": 125430.00, "currency": "INR",
-             "last_txn": {"type": "debit", "amount": 2500.00, "merchant": "ABC Store", "on": date(2025, 10, 25)}},
+             "last_txn": {"type": "debit", "amount": 2500.00, "merchant": "ABC Store", "on": date(2025, 10, 25)}}
         ],
-        "cards": [
-            {"last4": "8912", "status": "active", "network": "VISA", "limit": 200000, "blocked": False},
-        ],
-        "loans": [
-            {"type": "home", "emi": 32450.00, "due_date": date(2025, 11, 5), "outstanding_principal": 2850000.00, "tenure_months_left": 219},
-        ],
-        "policies": [
-            {"type": "health", "policy_no": "HLP-5566-9988", "status": "active", "claim": {
-                "id": "CLM987654", "submitted_on": date(2025, 10, 10), "amount": 85000.00, "status": "under_review",
-                "expected_settlement_on": date(2025, 11, 2)
-            }},
-        ],
+        "cards": [{"last4": "8912", "status": "active", "network": "VISA", "limit": 200000}],
+        "loans": [{"type": "home", "emi": 32450.00, "due_date": date(2025, 11, 5)}],
+        "policies": [{"type": "health", "policy_no": "HLP-5566-9988", "status": "active"}],
         "contact": {"email": "aarav@example.com", "phone": "+919876543210"}
     }
 }
