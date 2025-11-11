@@ -1,23 +1,69 @@
-# Minimal FastAPI app to simulate a voice intent loop for BFSI (prototype).
-# Adapts the TVS reference flow but keeps everything in-memory.
-
+# main.py
 from fastapi import FastAPI, Request, Form
-from fastapi.responses import Response, JSONResponse
+from fastapi.responses import Response, JSONResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from twilio.twiml.voice_response import VoiceResponse, Gather
 from datetime import datetime
 from business_logic_bfsi import BFSIBusinessLogic
-# ✅ Twilio Status Callback: add this endpoint
-import requests
+import requests, os, logging
 
-# app_bfsi.py
-import requests, os
-import logging  # 👈 added for simple server-side logs
+# --- Initialize app ---
+app = FastAPI(title="BFSI Voice Agent with Dashboard")
 
-app = FastAPI(title="BFSI Voice Agent (Prototype)")
+# --- Setup for UI (templates + static) ---
+app.mount("/static", StaticFiles(directory="static"), name="static")
+templates = Jinja2Templates(directory="templates")
+
+# --- AI Logic and memory ---
 logic = BFSIBusinessLogic()
-
-# In-memory store (per-call)
 conversations = {}
+demo_data = {
+    "name": "Aarav Sharma",
+    "balance": 125430.00,
+    "card_status": "Active",
+    "emi_due": "Nov 5, 2025",
+    "claim_status": "Under Review",
+}
+chat_log = []
+
+# === UI ROUTES ===
+
+@app.get("/", response_class=HTMLResponse)
+async def dashboard(request: Request):
+    """Main dashboard view"""
+    return templates.TemplateResponse("index.html", {"request": request, "chat_log": chat_log, "demo_data": demo_data})
+
+@app.get("/conversation")
+async def get_conversation():
+    return JSONResponse({"chat": chat_log})
+
+@app.post("/conversation")
+async def add_conversation(request: Request):
+    data = await request.json()
+    chat_log.append(data)
+    return JSONResponse({"ok": True})
+
+@app.post("/demo-update")
+async def demo_update(request: Request):
+    data = await request.json()
+    intent = data.get("intent")
+    if intent == "balance":
+        demo_data["balance"] -= 500
+    elif intent == "card_block":
+        demo_data["card_status"] = "Blocked"
+    elif intent == "emi_info":
+        demo_data["emi_due"] = "Paid"
+    elif intent == "claim_status":
+        demo_data["claim_status"] = "Settled"
+    return JSONResponse({"ok": True, "demo_data": demo_data})
+
+@app.get("/demo-data")
+async def get_demo_data():
+    return JSONResponse(demo_data)
+
+
+# === TWILIO VOICE ROUTES ===
 
 @app.post("/voice")
 async def voice(request: Request):
@@ -71,11 +117,8 @@ async def process(request: Request, SpeechResult: str = Form(None)):
         vr.append(g)
         return Response(str(vr), media_type="application/xml")
 
-    # (Optional) keep a tiny history if you want
     conversations.setdefault(call_sid, {}).setdefault("history", []).append({"user": user_text})
-
     answer = logic.generate_response(phone, user_text)
-
     vr.say(answer, voice="Polly.Joanna", language="en-IN")
     g = Gather(input="speech", action="/process", method="POST", timeout=8, speech_timeout="4", language="en-IN")
     g.say("Anything else?")
@@ -83,37 +126,12 @@ async def process(request: Request, SpeechResult: str = Form(None)):
     vr.say("Thank you for calling. Goodbye!")
     return Response(str(vr), media_type="application/xml")
 
-
-
-DASHBOARD_URL = os.getenv("DASHBOARD_URL", "http://localhost:8080")
-
 @app.post("/call-status")
 async def call_status(request: Request):
     form = await request.form()
     call_status = form.get("CallStatus")
-    try:
-        requests.post(f"{DASHBOARD_URL}/conversation", json={
-            "role": "system",
-            "text": f"📞 Call status: {call_status}"
-        })
-    except Exception as e:
-        print(f"Dashboard update failed: {e}")
+    chat_log.append({"role": "system", "text": f"📞 Call status: {call_status}"})
     return JSONResponse({"ok": True, "status": call_status})
-
-
-@app.get("/")
-async def home():
-    return {
-        "message": "Welcome to BFSI AI Voice Agent API",
-        "available_endpoints": [
-            "/voice",
-            "/get-phone",
-            "/process",
-            "/call-status",
-            "/health"
-        ],
-        "status": "running ✅"
-    }
 
 @app.get("/health")
 async def health():
