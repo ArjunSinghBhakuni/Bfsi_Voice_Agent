@@ -6,6 +6,11 @@ from fastapi.responses import Response, JSONResponse
 from twilio.twiml.voice_response import VoiceResponse, Gather
 from datetime import datetime
 from business_logic_bfsi import BFSIBusinessLogic
+# ✅ Twilio Status Callback: add this endpoint
+import requests
+
+# app_bfsi.py
+import requests, os
 import logging  # 👈 added for simple server-side logs
 
 app = FastAPI(title="BFSI Voice Agent (Prototype)")
@@ -78,21 +83,21 @@ async def process(request: Request, SpeechResult: str = Form(None)):
     vr.say("Thank you for calling. Goodbye!")
     return Response(str(vr), media_type="application/xml")
 
-# ✅ Twilio Status Callback: add this endpoint
-import requests
+
+
+DASHBOARD_URL = os.getenv("DASHBOARD_URL", "http://localhost:8080")
 
 @app.post("/call-status")
 async def call_status(request: Request):
     form = await request.form()
     call_status = form.get("CallStatus")
-    # Forward to web dashboard demo
     try:
-        requests.post("http://localhost:8080/conversation", json={
+        requests.post(f"{DASHBOARD_URL}/conversation", json={
             "role": "system",
-            "text": f"Call status: {call_status}"
+            "text": f"📞 Call status: {call_status}"
         })
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"Dashboard update failed: {e}")
     return JSONResponse({"ok": True, "status": call_status})
 
 @app.get("/health")
