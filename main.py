@@ -88,13 +88,11 @@ async def get_demo_data():
 # ================================================================
 @app.get("/start-call")
 async def start_call():
-    """Trigger outbound Twilio call to the user."""
     try:
         if not all([TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER, YOUR_PHONE_NUMBER]):
-            return JSONResponse({"error": "Missing Twilio configuration"}, status_code=500)
+            raise Exception("❌ Missing Twilio configuration in environment variables")
 
         client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
-
         call = client.calls.create(
             to=YOUR_PHONE_NUMBER,
             from_=TWILIO_PHONE_NUMBER,
@@ -104,20 +102,10 @@ async def start_call():
             method="POST"
         )
 
-        chat_log.append({
-            "role": "system",
-            "text": f"📞 Outbound call initiated — SID: {call.sid}"
-        })
-
-        return JSONResponse({
-            "status": "Call initiated",
-            "sid": call.sid,
-            "message": f"📞 Calling {YOUR_PHONE_NUMBER} via Twilio"
-        })
-
+        return JSONResponse({"status": "success", "sid": call.sid})
     except Exception as e:
+        print(f"❌ /start-call ERROR: {e}")
         return JSONResponse({"error": str(e)}, status_code=500)
-
 
 # ================================================================
 # 📞 TWILIO VOICE ROUTES
