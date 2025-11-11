@@ -104,7 +104,9 @@ async def start_call():
 
         return JSONResponse({"status": "success", "sid": call.sid})
     except Exception as e:
-        print(f"❌ /start-call ERROR: {e}")
+        # Print in Render logs
+        import traceback
+        traceback.print_exc()
         return JSONResponse({"error": str(e)}, status_code=500)
 
 # ================================================================
