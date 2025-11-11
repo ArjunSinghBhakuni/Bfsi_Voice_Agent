@@ -1,0 +1,66 @@
+body {
+  font-family: 'Segoe UI', sans-serif;
+  background: #f9fafb;
+  margin: 0;
+  padding: 0;
+}
+.top-panel {
+  background: #2563eb;
+  color: white;
+  padding: 15px 30px;
+}
+.info-grid {
+  display: flex;
+  gap: 30px;
+  font-size: 1.1em;
+  margin-top: 5px;
+}
+.container {
+  display: flex;
+  height: calc(100vh - 120px);
+}
+.left {
+  width: 30%;
+  background: #eef2ff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+.left .logo {
+  width: 120px;
+  height: 120px;
+  cursor: pointer;
+  transition: transform 0.3s;
+}
+.left .logo:hover {
+  transform: scale(1.1);
+}
+.right {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+  background: white;
+}
+.examples {
+  margin-top: 30px;
+  text-align: left;
+}
+.examples ul {
+  list-style-type: none;
+  padding: 0;
+}
+.examples li {
+  background: #fff;
+  margin: 4px 0;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border-left: 4px solid #3b82f6;
+}
+.msg {
+  padding: 8px;
+  margin: 5px 0;
+  border-radius: 8px;
+}
+.msg.user { background: #d1fae5; }
+.msg.agent { background: #e0f2fe; }

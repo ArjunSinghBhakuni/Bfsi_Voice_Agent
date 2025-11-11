@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>BFSI AI Voice Agent Demo</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <!-- 🌟 TOP PANEL: Customer Info -->
+  <div class="top-panel">
+    <h2>👤 Customer Snapshot: <span id="cust-name">{{ demo_data.name }}</span></h2>
+    <div class="info-grid">
+      <div>💰 Balance: ₹<span id="balance">{{ demo_data.balance }}</span></div>
+      <div>💳 Card: <span id="card">{{ demo_data.card_status }}</span></div>
+      <div>🏠 EMI Due: <span id="emi">{{ demo_data.emi_due }}</span></div>
+      <div>🩺 Claim: <span id="claim">{{ demo_data.claim_status }}</span></div>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- LEFT: Call Button -->
+    <div class="left">
+      <img src="https://cdn-icons-png.flaticon.com/512/2920/2920348.png"
+           alt="Call Agent" class="logo" onclick="startCall()">
+      <h3>Call Agent</h3>
+      <div class="examples">
+        <h4>Try saying:</h4>
+        <ul>
+          <li>“What’s my balance?”</li>
+          <li>“Block my card.”</li>
+          <li>“When is my next EMI due?”</li>
+          <li>“What’s my claim status?”</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- RIGHT: Conversation -->
+    <div class="right">
+      <h2>🗣️ Conversation</h2>
+      <div id="chat-log"></div>
+    </div>
+  </div>
+
+  <script>
+    async function startCall() {
+      const res = await fetch('/start-call');
+      alert('📞 Call initiated successfully!');
+    }
+
+    async function refreshChat() {
+      const res = await fetch('/conversation');
+      const data = await res.json();
+      const log = document.getElementById('chat-log');
+      log.innerHTML = data.chat.map(c =>
+        `<div class="msg ${c.role}"><strong>${c.role}:</strong> ${c.text}</div>`
+      ).join('');
+    }
+
+    async function refreshDemoData() {
+      const res = await fetch('/demo-data');
+      const data = await res.json();
+      document.getElementById("balance").innerText = data.balance;
+      document.getElementById("card").innerText = data.card_status;
+      document.getElementById("emi").innerText = data.emi_due;
+      document.getElementById("claim").innerText = data.claim_status;
+    }
+
+    setInterval(refreshChat, 3000);
+    setInterval(refreshDemoData, 3000);
+  </script>
+</body>
+</html>
