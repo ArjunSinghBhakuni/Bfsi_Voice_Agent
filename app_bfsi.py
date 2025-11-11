@@ -79,32 +79,21 @@ async def process(request: Request, SpeechResult: str = Form(None)):
     return Response(str(vr), media_type="application/xml")
 
 # ✅ Twilio Status Callback: add this endpoint
+import requests
+
 @app.post("/call-status")
 async def call_status(request: Request):
-    """
-    Twilio Status Callback webhook.
-    Logs call lifecycle events (initiated, ringing, answered, completed) and durations.
-    Always return 200 quickly.
-    """
     form = await request.form()
-    call_sid = form.get("CallSid")
     call_status = form.get("CallStatus")
-    from_num = form.get("From")
-    to_num = form.get("To")
-    duration = form.get("CallDuration")
-    timestamp = form.get("Timestamp") or form.get("TimestampUtc")  # may vary
-
-    conversations.setdefault(call_sid, {}).setdefault("status_events", []).append({
-        "status": call_status,
-        "duration": duration,
-        "from": from_num,
-        "to": to_num,
-        "timestamp": timestamp
-    })
-
-    logging.info(f"[CALL-STATUS] sid={call_sid} status={call_status} from={from_num} to={to_num} duration={duration} ts={timestamp}")
-    # Return empty 200 OK; Twilio just needs a 2xx
-    return JSONResponse({"ok": True, "sid": call_sid, "status": call_status})
+    # Forward to web dashboard demo
+    try:
+        requests.post("http://localhost:8080/conversation", json={
+            "role": "system",
+            "text": f"Call status: {call_status}"
+        })
+    except Exception:
+        pass
+    return JSONResponse({"ok": True, "status": call_status})
 
 @app.get("/health")
 async def health():
